@@ -1,0 +1,20 @@
+---
+title: UART 로거 보드
+date: "2026-07-20"
+summary: MCU 디버그 UART를 USB로 올리고, 호스트에서 Python으로 저장하는 작은 기록.
+tags:
+  - python
+  - uart
+  - linux
+  - hardware
+---
+
+펌웨어는 115200 8N1로 디버그 문자열을 밀어 보내고, 호스트는 USB-UART로 받는다.
+
+작업 메모:
+
+- TX/RX 교차, 공통 GND
+- Linux에서 `/dev/ttyUSB0` 권한
+- 로그 파일은 날짜별로 회전
+
+호스트 쪽 스크립트와 권한 이슈는 Study의 Python/UART 글로 이어진다. 아래 `python` 태그를 누르면 Study 태그 목록으로 간다.

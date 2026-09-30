@@ -1,0 +1,23 @@
+---
+title: Python으로 시리얼 로그 읽기
+date: "2026-06-01"
+summary: pyserial로 MCU UART 출력을 호스트에서 읽는 최소 스크립트.
+tags:
+  - python
+  - uart
+  - linux
+---
+
+호스트에서 보드 로그를 붙잡을 때 `pyserial`이면 충분하다.
+
+```python
+import serial
+
+with serial.Serial("/dev/ttyUSB0", 115200, timeout=1) as port:
+    while True:
+        line = port.readline()
+        if line:
+            print(line.decode("utf-8", errors="replace"), end="")
+```
+
+권한 오류가 나면 해당 tty 디바이스 그룹(`dialout` 등)에 사용자를 넣는다. 태그 `python`은 프로젝트 기록과 Study를 잇는 고리다.

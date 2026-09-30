@@ -4,14 +4,19 @@
   "private": true,
   "scripts": {
     "dev": "next dev",
-    "build": "next build",
+    "build": "next build && node -e \"require('fs').writeFileSync('out/.nojekyll','')\"",
     "start": "next start",
     "lint": "eslint"
   },
   "dependencies": {
+    "gray-matter": "^4.0.3",
     "next": "16.3.7",
+    "next-mdx-remote": "^6.0.0",
     "react": "19.2.8",
-    "react-dom": "19.2.8"
+    "react-dom": "19.2.8",
+    "rehype-pretty-code": "^0.14.5",
+    "remark-gfm": "^4.0.1",
+    "shiki": "^4.4.3"
   },
   "devDependencies": {
     "@tailwindcss/postcss": "^4",
