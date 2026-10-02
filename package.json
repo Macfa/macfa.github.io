@@ -3,9 +3,12 @@
   "version": "0.1.0",
   "private": true,
   "scripts": {
-    "dev": "next dev",
-    "build": "next build && node -e \"require('fs').writeFileSync('out/.nojekyll','')\"",
-    "db:seed": "node scripts/seed.mjs",
+    "dev": "npm run content:sync && next dev",
+    "build": "npm run content:sync && next build --webpack && node -e \"require('fs').writeFileSync('out/.nojekyll','')\"",
+    "content:sync": "node scripts/sync-content.mjs",
+    "content:check": "node scripts/sync-content.mjs",
+    "db:seed": "npm run content:sync",
+    "editor": "node writer/server.mjs",
     "start": "next start",
     "lint": "eslint"
   },

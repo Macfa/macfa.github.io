@@ -1,0 +1,125 @@
+<!doctype html>
+<html lang="ko">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Macfa Writer</title>
+    <link rel="stylesheet" href="/style.css" />
+  </head>
+  <body>
+    <div class="app-shell">
+      <aside class="sidebar">
+        <div class="brand">
+          <span class="eyebrow">LOCAL AUTHORING</span>
+          <h1>Macfa Writer</h1>
+        </div>
+        <div class="new-actions">
+          <button type="button" data-new="tech">+ Tech</button>
+          <button type="button" data-new="project">+ Project</button>
+        </div>
+        <input id="post-search" class="search" type="search" placeholder="글 검색" />
+        <nav id="post-list" class="post-list" aria-label="콘텐츠 목록"></nav>
+      </aside>
+
+      <main class="workspace">
+        <form id="post-form">
+          <header class="editor-header">
+            <div>
+              <span id="mode-label" class="eyebrow">NEW POST</span>
+              <h2 id="editor-title">새 글 작성</h2>
+            </div>
+            <div class="header-actions">
+              <span id="save-status" class="status">저장되지 않음</span>
+              <button class="primary" type="submit">Markdown 저장</button>
+            </div>
+          </header>
+
+          <section class="metadata panel">
+            <div class="field compact">
+              <label for="kind">종류</label>
+              <select id="kind" name="kind">
+                <option value="tech">Tech</option>
+                <option value="project">Project</option>
+              </select>
+            </div>
+            <div id="category-field" class="field compact">
+              <label for="category">카테고리</label>
+              <input id="category" name="category" placeholder="communication" />
+            </div>
+            <div class="field compact grow">
+              <label for="slug">Slug</label>
+              <input id="slug" name="slug" placeholder="uart-frame-and-baud-rate" />
+            </div>
+            <div class="field compact date-field">
+              <label for="date">날짜</label>
+              <input id="date" name="date" type="date" />
+            </div>
+            <div class="field full">
+              <label for="title">제목</label>
+              <input id="title" name="title" class="title-input" placeholder="글 제목" />
+            </div>
+            <div class="field full">
+              <label for="summary">요약</label>
+              <textarea id="summary" name="summary" rows="2" placeholder="목록에 표시할 짧은 설명"></textarea>
+            </div>
+            <div class="field full tag-field">
+              <label for="tag-input">태그</label>
+              <div id="tag-chips" class="tag-chips"></div>
+              <input id="tag-input" autocomplete="off" placeholder="태그 검색 후 Tab 또는 Enter" />
+              <div id="tag-suggestions" class="suggestions metadata-suggestions" hidden></div>
+            </div>
+            <label class="sample-toggle">
+              <input id="sample" type="checkbox" />
+              샘플 콘텐츠로 표시
+            </label>
+          </section>
+
+          <section id="project-links-section" class="panel" hidden>
+            <div class="section-heading">
+              <div>
+                <span class="eyebrow">PROJECT ACCESS</span>
+                <h3>공개 링크</h3>
+              </div>
+              <button id="add-link" type="button" class="secondary">+ 링크 추가</button>
+            </div>
+            <div id="project-links" class="link-list"></div>
+          </section>
+
+          <section class="writing-grid">
+            <div class="panel editor-panel">
+              <div class="section-heading">
+                <div>
+                  <span class="eyebrow">MARKDOWN</span>
+                  <h3>본문</h3>
+                </div>
+                <label class="media-button">
+                  이미지/GIF 추가
+                  <input id="media-input" type="file" accept="image/*,video/mp4,video/webm" hidden />
+                </label>
+              </div>
+              <p class="hint">
+                <kbd>#</kbd>태그 <kbd>Tab</kbd> → 글 제목 검색 <kbd>Tab</kbd>으로 Tech 링크를 삽입합니다.
+              </p>
+              <div class="body-editor-wrap">
+                <textarea id="body" spellcheck="false" placeholder="## 개요&#10;&#10;내용을 작성하세요."></textarea>
+                <div id="body-suggestions" class="suggestions body-suggestions" hidden></div>
+              </div>
+            </div>
+
+            <div class="panel preview-panel">
+              <div class="section-heading">
+                <div>
+                  <span class="eyebrow">PREVIEW</span>
+                  <h3>미리보기</h3>
+                </div>
+              </div>
+              <article id="preview" class="preview"></article>
+            </div>
+          </section>
+        </form>
+      </main>
+    </div>
+    <div id="toast" class="toast" hidden></div>
+    <script type="module" src="/app.js"></script>
+  </body>
+</html>
