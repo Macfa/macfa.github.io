@@ -1,14 +1,15 @@
-export type PostKind = "study" | "project";
+export type PostKind = "tech" | "project";
 
 export type PostFrontmatter = {
   title: string;
   date: string;
   summary: string;
   tags: string[];
+  isSample: boolean;
 };
 
-export type StudyPost = PostFrontmatter & {
-  kind: "study";
+export type TechPost = PostFrontmatter & {
+  kind: "tech";
   slug: string;
   category: string;
   source: string;
@@ -20,4 +21,4 @@ export type ProjectPost = PostFrontmatter & {
   source: string;
 };
 
-export type Post = StudyPost | ProjectPost;
+export type Post = TechPost | ProjectPost;

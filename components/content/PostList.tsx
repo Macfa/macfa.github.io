@@ -19,7 +19,7 @@ export function PostList({
       {posts.map((post) => (
         <PostCard
           key={
-            post.kind === "study"
+            post.kind === "tech"
               ? `${post.category}/${post.slug}`
               : post.slug
           }

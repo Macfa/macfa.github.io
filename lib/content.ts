@@ -1,140 +1,138 @@
-import fs from "fs";
-import path from "path";
-import matter from "gray-matter";
-import type { PostFrontmatter, ProjectPost, StudyPost } from "./types";
+import { cache } from "react";
+import { DatabaseSync } from "node:sqlite";
+import path from "node:path";
+import type { Post, ProjectPost, TechPost } from "./types";
 
-const CONTENT_DIR = path.join(process.cwd(), "content");
-const STUDY_DIR = path.join(CONTENT_DIR, "study");
-const PROJECTS_DIR = path.join(CONTENT_DIR, "projects");
+type PostRow = {
+  id: number;
+  kind: "project" | "tech";
+  slug: string;
+  category: string | null;
+  title: string;
+  summary: string;
+  body: string;
+  published_at: string;
+  is_sample: number;
+};
 
-function isMdxFile(name: string) {
-  return name.endsWith(".mdx") || name.endsWith(".md");
-}
+type StringRow = { value: string };
+type TagRow = { name: string };
 
-function slugFromFilename(filename: string) {
-  return filename.replace(/\.mdx?$/, "");
-}
+let database: DatabaseSync | undefined;
 
-function parseFrontmatter(raw: string, filePath: string): {
-  data: PostFrontmatter;
-  source: string;
-} {
-  const { data, content } = matter(raw);
-  const title = typeof data.title === "string" ? data.title : "";
-  const date = typeof data.date === "string" ? data.date : "";
-  const summary = typeof data.summary === "string" ? data.summary : "";
-  const tags = Array.isArray(data.tags)
-    ? data.tags
-        .filter((tag): tag is string => typeof tag === "string")
-        .map((tag) => tag.trim().toLowerCase())
-        .filter(Boolean)
-    : [];
-
-  if (!title || !date) {
-    throw new Error(`Invalid frontmatter in ${filePath}: title and date are required`);
-  }
-
-  return {
-    data: { title, date, summary, tags },
-    source: content,
-  };
-}
-
-function readFile(filePath: string) {
-  return fs.readFileSync(filePath, "utf8");
-}
-
-function listDir(dir: string) {
-  if (!fs.existsSync(dir)) {
-    return [];
-  }
-  return fs.readdirSync(dir, { withFileTypes: true });
-}
-
-export function getStudyCategories() {
-  return listDir(STUDY_DIR)
-    .filter((entry) => entry.isDirectory())
-    .map((entry) => entry.name)
-    .sort();
-}
-
-export function getStudyPosts(): StudyPost[] {
-  const posts: StudyPost[] = [];
-
-  for (const category of getStudyCategories()) {
-    const categoryDir = path.join(STUDY_DIR, category);
-    for (const entry of listDir(categoryDir)) {
-      if (!entry.isFile() || !isMdxFile(entry.name)) {
-        continue;
-      }
-      const filePath = path.join(categoryDir, entry.name);
-      const { data, source } = parseFrontmatter(readFile(filePath), filePath);
-      posts.push({
-        kind: "study",
-        slug: slugFromFilename(entry.name),
-        category,
-        source,
-        ...data,
-      });
-    }
-  }
-
-  return posts.sort((a, b) => b.date.localeCompare(a.date));
-}
-
-export function getStudyPost(category: string, slug: string) {
-  return getStudyPosts().find(
-    (post) => post.category === category && post.slug === slug,
-  );
-}
-
-export function getStudyPostsByCategory(category: string) {
-  return getStudyPosts().filter((post) => post.category === category);
-}
-
-export function getStudyPostsByTag(tag: string) {
-  const normalized = tag.toLowerCase();
-  return getStudyPosts().filter((post) => post.tags.includes(normalized));
-}
-
-export function getProjectPosts(): ProjectPost[] {
-  const posts: ProjectPost[] = [];
-
-  for (const entry of listDir(PROJECTS_DIR)) {
-    if (!entry.isFile() || !isMdxFile(entry.name)) {
-      continue;
-    }
-    const filePath = path.join(PROJECTS_DIR, entry.name);
-    const { data, source } = parseFrontmatter(readFile(filePath), filePath);
-    posts.push({
-      kind: "project",
-      slug: slugFromFilename(entry.name),
-      source,
-      ...data,
+function getDatabase() {
+  if (!database) {
+    database = new DatabaseSync(path.join(process.cwd(), "data", "blog.db"), {
+      readOnly: true,
     });
   }
-
-  return posts.sort((a, b) => b.date.localeCompare(a.date));
+  return database;
 }
 
-export function getProjectPost(slug: string) {
-  return getProjectPosts().find((post) => post.slug === slug);
+function queryTags(postId: number) {
+  return getDatabase()
+    .prepare(
+      `SELECT tags.name
+       FROM tags
+       JOIN post_tags ON post_tags.tag_id = tags.id
+       WHERE post_tags.post_id = ?
+       ORDER BY tags.name`,
+    )
+    .all(postId)
+    .map((row) => (row as TagRow).name);
 }
 
-export function getAllTags() {
-  const tags = new Set<string>();
-  for (const post of [...getStudyPosts(), ...getProjectPosts()]) {
-    for (const tag of post.tags) {
-      tags.add(tag);
-    }
+function toPost(row: PostRow): Post {
+  const shared = {
+    slug: row.slug,
+    title: row.title,
+    date: row.published_at,
+    summary: row.summary,
+    source: row.body,
+    tags: queryTags(row.id),
+    isSample: Boolean(row.is_sample),
+  };
+
+  if (row.kind === "tech") {
+    return {
+      ...shared,
+      kind: "tech",
+      category: row.category ?? "uncategorized",
+    } satisfies TechPost;
   }
-  return [...tags].sort();
+
+  return { ...shared, kind: "project" } satisfies ProjectPost;
 }
 
-export function getRecentStudyPosts(limit = 3) {
-  return getStudyPosts().slice(0, limit);
+function queryPosts(where = "", parameters: string[] = []) {
+  const rows = getDatabase()
+    .prepare(
+      `SELECT id, kind, slug, category, title, summary, body, published_at, is_sample
+       FROM posts
+       ${where}
+       ORDER BY published_at DESC, sort_order DESC, id DESC`,
+    )
+    .all(...parameters) as PostRow[];
+
+  return rows.map(toPost);
 }
 
-export function getRecentProjectPosts(limit = 3) {
-  return getProjectPosts().slice(0, limit);
-}
+export const getTechCategories = cache(() =>
+  (
+    getDatabase()
+      .prepare(
+        `SELECT DISTINCT category AS value
+         FROM posts
+         WHERE kind = 'tech'
+         ORDER BY category`,
+      )
+      .all() as StringRow[]
+  ).map((row) => row.value),
+);
+
+export const getTechPosts = cache(() =>
+  queryPosts("WHERE kind = 'tech'").filter(
+    (post): post is TechPost => post.kind === "tech",
+  ),
+);
+
+export const getTechPost = cache((category: string, slug: string) =>
+  getTechPosts().find(
+    (post) => post.category === category && post.slug === slug,
+  ),
+);
+
+export const getTechPostsByCategory = cache((category: string) =>
+  getTechPosts().filter((post) => post.category === category),
+);
+
+export const getTechPostsByTag = cache((tag: string) => {
+  const normalized = tag.toLowerCase();
+  return getTechPosts().filter((post) => post.tags.includes(normalized));
+});
+
+export const getProjectPosts = cache(() =>
+  queryPosts("WHERE kind = 'project'").filter(
+    (post): post is ProjectPost => post.kind === "project",
+  ),
+);
+
+export const getProjectPost = cache((slug: string) =>
+  getProjectPosts().find((post) => post.slug === slug),
+);
+
+export const getAllTags = cache(() =>
+  (
+    getDatabase()
+      .prepare("SELECT name AS value FROM tags ORDER BY name")
+      .all() as StringRow[]
+  ).map((row) => row.value),
+);
+
+export const getRecentTechPosts = cache((limit = 3) =>
+  getTechPosts().slice(0, limit),
+);
+
+export const getRecentProjectPosts = cache((limit = 3) =>
+  getProjectPosts().slice(0, limit),
+);

@@ -5,8 +5,12 @@
   "scripts": {
     "dev": "next dev",
     "build": "next build && node -e \"require('fs').writeFileSync('out/.nojekyll','')\"",
+    "db:seed": "node scripts/seed.mjs",
     "start": "next start",
     "lint": "eslint"
+  },
+  "engines": {
+    "node": ">=22.13.0"
   },
   "dependencies": {
     "gray-matter": "^4.0.3",

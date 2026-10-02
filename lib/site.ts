@@ -7,15 +7,13 @@ export const site = {
 export const navItems = [
   { href: "/", label: "Home" },
   { href: "/projects", label: "Projects" },
-  { href: "/study", label: "Study" },
+  { href: "/tech", label: "Tech" },
   { href: "/about", label: "About" },
 ] as const;
 
 export const categoryLabels: Record<string, string> = {
   c: "C",
-  mcu: "MCU",
   communication: "Communication",
-  linux: "Linux",
 };
 
 export function formatCategory(slug: string) {

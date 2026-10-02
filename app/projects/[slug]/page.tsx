@@ -3,6 +3,7 @@ import { notFound } from "next/navigation";
 import { Container } from "@/components/layout/Container";
 import { PostBody } from "@/components/content/PostBody";
 import { TagList } from "@/components/content/TagList";
+import { SampleBadge } from "@/components/content/SampleBadge";
 import { getProjectPost, getProjectPosts } from "@/lib/content";
 
 export const dynamicParams = false;
@@ -43,6 +44,11 @@ export default async function ProjectPostPage({
       <h1 className="mt-2 text-3xl font-semibold tracking-tight">
         {post.title}
       </h1>
+      {post.isSample ? (
+        <div className="mt-4">
+          <SampleBadge />
+        </div>
+      ) : null}
       <div className="mt-4">
         <TagList tags={post.tags} />
       </div>

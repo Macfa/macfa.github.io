@@ -1,11 +1,12 @@
 import Link from "next/link";
 import { formatCategory } from "@/lib/site";
 import type { Post } from "@/lib/types";
+import { SampleBadge } from "./SampleBadge";
 import { TagList } from "./TagList";
 
 function hrefFor(post: Post) {
-  if (post.kind === "study") {
-    return `/study/${post.category}/${post.slug}`;
+  if (post.kind === "tech") {
+    return `/tech/${post.category}/${post.slug}`;
   }
   return `/projects/${post.slug}`;
 }
@@ -15,11 +16,11 @@ export function PostCard({ post }: { post: Post }) {
     <article className="border-b border-neutral-200 py-5 last:border-b-0 dark:border-neutral-800">
       <p className="font-mono text-xs text-neutral-500">
         <time dateTime={post.date}>{post.date}</time>
-        {post.kind === "study" ? (
+        {post.kind === "tech" ? (
           <>
             {" · "}
             <Link
-              href={`/study/${post.category}`}
+              href={`/tech/${post.category}`}
               className="hover:text-foreground"
             >
               {formatCategory(post.category)}
@@ -34,6 +35,11 @@ export function PostCard({ post }: { post: Post }) {
           {post.title}
         </Link>
       </h2>
+      {post.isSample ? (
+        <div className="mt-2">
+          <SampleBadge />
+        </div>
+      ) : null}
       {post.summary ? (
         <p className="mt-2 text-sm leading-6 text-neutral-600 dark:text-neutral-400">
           {post.summary}

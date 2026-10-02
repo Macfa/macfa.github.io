@@ -15,7 +15,7 @@ export function CategoryNav({
         return (
           <li key={category}>
             <Link
-              href={`/study/${category}`}
+              href={`/tech/${category}`}
               className={
                 isActive
                   ? "rounded border border-foreground px-2 py-1 font-mono text-xs"
