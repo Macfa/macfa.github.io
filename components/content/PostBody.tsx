@@ -4,11 +4,22 @@ import { mdxOptions } from "@/lib/mdx";
 import { Prose } from "@/components/md/Prose";
 
 const mdxComponents = {
-  a: (props: ComponentPropsWithoutRef<"a">) => (
-    <a
-      {...props}
-      className="text-foreground underline decoration-neutral-400 underline-offset-4 hover:decoration-foreground"
-    />
+  a: ({ href, ...props }: ComponentPropsWithoutRef<"a">) => {
+    const external = href?.startsWith("http://") || href?.startsWith("https://");
+    return (
+      <a
+        {...props}
+        href={href}
+        target={external ? "_blank" : undefined}
+        rel={external ? "noreferrer" : undefined}
+        className="text-foreground underline decoration-neutral-400 underline-offset-4 hover:decoration-foreground"
+      />
+    );
+  },
+  img: ({ alt = "", ...props }: ComponentPropsWithoutRef<"img">) => (
+    // Markdown content can point to local media today and a CDN later.
+    // eslint-disable-next-line @next/next/no-img-element
+    <img {...props} alt={alt} loading="lazy" decoding="async" />
   ),
 };
 

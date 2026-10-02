@@ -19,11 +19,24 @@ const posts = [
     isSample: true,
     sortOrder: 20,
     tags: ["c", "mcu", "sensor", "uart"],
+    links: [],
+    relatedTech: [
+      {
+        category: "communication",
+        slug: "uart-frame-and-baud-rate",
+        context: "보드의 상태와 센서 값을 호스트로 전달하는 통신 기반",
+      },
+      {
+        category: "c",
+        slug: "c-struct-layout",
+        context: "센서 샘플과 제어 상태를 안전하게 표현하는 데이터 구조",
+      },
+    ],
     body: `> 이 글은 블로그 구성을 보여 주기 위한 **샘플 프로젝트**입니다. 실제 수행 이력이 아닙니다.
 
 ## 프로젝트 개요
 
-온도와 토양 수분을 주기적으로 측정하고, 설정한 임계값에 따라 환기 팬과 급수 펌프를 제어하는 장치를 가정했습니다. 제어 상태와 센서 값은 UART를 통해 호스트로 전달합니다.
+온도와 토양 수분을 주기적으로 측정하고, 설정한 임계값에 따라 환기 팬과 급수 펌프를 제어하는 장치를 가정했습니다. 제어 상태와 센서 값은 [UART](/tech/communication/uart-frame-and-baud-rate)를 통해 호스트로 전달합니다.
 
 ## 맡은 역할
 
@@ -42,7 +55,7 @@ const posts = [
 
 ## 기대 결과
 
-센서 수집, 판단, 출력 제어를 서로 분리하여 이후 센서나 통신 방식을 바꾸더라도 핵심 제어 로직을 재사용할 수 있습니다.`,
+센서 수집, 판단, 출력 제어를 서로 분리하여 이후 센서나 통신 방식을 바꾸더라도 핵심 제어 로직을 재사용할 수 있습니다. 센서 데이터 묶음의 메모리 배치는 [C 구조체와 메모리 배치](/tech/c/c-struct-layout)에서 더 자세히 다룹니다.`,
   },
   {
     kind: "project",
@@ -55,11 +68,19 @@ const posts = [
     isSample: true,
     sortOrder: 10,
     tags: ["python", "uart", "linux", "debugging"],
+    links: [],
+    relatedTech: [
+      {
+        category: "communication",
+        slug: "uart-frame-and-baud-rate",
+        context: "로그가 깨질 때 프레임과 보레이트를 점검하기 위한 배경 지식",
+      },
+    ],
     body: `> 이 글은 블로그 구성을 보여 주기 위한 **샘플 프로젝트**입니다. 실제 수행 이력이 아닙니다.
 
 ## 프로젝트 개요
 
-개발 보드가 출력하는 UART 메시지를 호스트에서 읽어 날짜별 파일로 저장하고, 오류 수준의 로그를 별도로 표시하는 작은 진단 도구를 가정했습니다.
+개발 보드가 출력하는 UART 메시지를 호스트에서 읽어 날짜별 파일로 저장하고, 오류 수준의 로그를 별도로 표시하는 작은 진단 도구를 가정했습니다. 통신 설정은 [UART 프레임과 보레이트](/tech/communication/uart-frame-and-baud-rate) 글과 연결됩니다.
 
 ## 핵심 기능
 
@@ -94,6 +115,8 @@ MCU -> USB-UART -> serial reader -> log file
     isSample: true,
     sortOrder: 20,
     tags: ["uart", "communication", "mcu"],
+    links: [],
+    relatedTech: [],
     body: `> 이 글은 Tech 메뉴의 구성을 보여 주기 위한 **샘플 기술 글**입니다.
 
 ## UART란?
@@ -132,6 +155,8 @@ MCU의 시스템 클록이 바뀌었는데 UART 분주 값을 그대로 사용�
     isSample: true,
     sortOrder: 10,
     tags: ["c", "memory", "embedded"],
+    links: [],
+    relatedTech: [],
     body: `> 이 글은 Tech 메뉴의 구성을 보여 주기 위한 **샘플 기술 글**입니다.
 
 ## 구조체의 역할
@@ -169,6 +194,14 @@ printf("size=%zu\\n", sizeof(SensorSample));
   },
 ];
 
+for (const post of posts) {
+  if (post.kind === "project" && !post.isSample && post.links.length === 0) {
+    throw new Error(
+      `Published project requires at least one public link: ${post.slug}`,
+    );
+  }
+}
+
 mkdirSync(dirname(databasePath), { recursive: true });
 rmSync(databasePath, { force: true });
 
@@ -185,6 +218,17 @@ const findTag = db.prepare("SELECT id FROM tags WHERE name = ?");
 const insertPostTag = db.prepare(
   "INSERT INTO post_tags (post_id, tag_id) VALUES (?, ?)",
 );
+const insertProjectLink = db.prepare(`
+  INSERT INTO project_links (project_id, kind, label, url, sort_order)
+  VALUES (?, ?, ?, ?, ?)
+`);
+const insertProjectTech = db.prepare(`
+  INSERT INTO project_tech_links (
+    project_id, tech_post_id, context, sort_order
+  ) VALUES (?, ?, ?, ?)
+`);
+
+const postIds = new Map();
 
 db.exec("BEGIN");
 try {
@@ -200,11 +244,39 @@ try {
       post.isSample ? 1 : 0,
       post.sortOrder,
     );
+    const postId = result.lastInsertRowid;
+    const routeKey = `${post.kind}:${post.category ?? ""}:${post.slug}`;
+    postIds.set(routeKey, postId);
 
     for (const tag of post.tags) {
       insertTag.run(tag);
       const tagRow = findTag.get(tag);
-      insertPostTag.run(result.lastInsertRowid, tagRow.id);
+      insertPostTag.run(postId, tagRow.id);
+    }
+
+    for (const [index, link] of post.links.entries()) {
+      insertProjectLink.run(
+        postId,
+        link.kind,
+        link.label,
+        link.url,
+        index,
+      );
+    }
+  }
+
+  for (const post of posts.filter((item) => item.kind === "project")) {
+    const projectId = postIds.get(`project::${post.slug}`);
+    for (const [index, relation] of post.relatedTech.entries()) {
+      const techId = postIds.get(
+        `tech:${relation.category}:${relation.slug}`,
+      );
+      if (!techId) {
+        throw new Error(
+          `Related Tech post not found: ${relation.category}/${relation.slug}`,
+        );
+      }
+      insertProjectTech.run(projectId, techId, relation.context, index);
     }
   }
   db.exec("COMMIT");

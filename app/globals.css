@@ -101,3 +101,19 @@ body {
   border: 0;
   padding: 0;
 }
+
+.tech-prose img,
+.tech-prose video {
+  display: block;
+  width: 100%;
+  height: auto;
+  margin-top: 1.5rem;
+  margin-bottom: 1.5rem;
+  border: 1px solid color-mix(in oklab, var(--foreground) 12%, transparent);
+  border-radius: 0.5rem;
+  background: color-mix(in oklab, var(--foreground) 4%, transparent);
+}
+
+.tech-prose img {
+  object-fit: contain;
+}

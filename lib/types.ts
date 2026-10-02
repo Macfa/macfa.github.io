@@ -15,10 +15,25 @@ export type TechPost = PostFrontmatter & {
   source: string;
 };
 
+export type ProjectLink = {
+  kind: "demo" | "repository" | "documentation" | "download";
+  label: string;
+  url: string;
+};
+
+export type RelatedTech = Pick<
+  TechPost,
+  "slug" | "category" | "title" | "summary"
+> & {
+  context: string;
+};
+
 export type ProjectPost = PostFrontmatter & {
   kind: "project";
   slug: string;
   source: string;
+  links: ProjectLink[];
+  relatedTech: RelatedTech[];
 };
 
 export type Post = TechPost | ProjectPost;

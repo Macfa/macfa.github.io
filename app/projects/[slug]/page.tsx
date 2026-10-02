@@ -4,6 +4,8 @@ import { Container } from "@/components/layout/Container";
 import { PostBody } from "@/components/content/PostBody";
 import { TagList } from "@/components/content/TagList";
 import { SampleBadge } from "@/components/content/SampleBadge";
+import { ProjectLinks } from "@/components/projects/ProjectLinks";
+import { RelatedTech } from "@/components/projects/RelatedTech";
 import { getProjectPost, getProjectPosts } from "@/lib/content";
 
 export const dynamicParams = false;
@@ -52,9 +54,11 @@ export default async function ProjectPostPage({
       <div className="mt-4">
         <TagList tags={post.tags} />
       </div>
+      <ProjectLinks links={post.links} />
       <div className="mt-8">
         <PostBody source={post.source} />
       </div>
+      <RelatedTech posts={post.relatedTech} />
     </Container>
   );
 }

@@ -1,7 +1,13 @@
 import { cache } from "react";
 import { DatabaseSync } from "node:sqlite";
 import path from "node:path";
-import type { Post, ProjectPost, TechPost } from "./types";
+import type {
+  Post,
+  ProjectLink,
+  ProjectPost,
+  RelatedTech,
+  TechPost,
+} from "./types";
 
 type PostRow = {
   id: number;
@@ -17,6 +23,8 @@ type PostRow = {
 
 type StringRow = { value: string };
 type TagRow = { name: string };
+type ProjectLinkRow = ProjectLink;
+type RelatedTechRow = RelatedTech;
 
 let database: DatabaseSync | undefined;
 
@@ -42,6 +50,29 @@ function queryTags(postId: number) {
     .map((row) => (row as TagRow).name);
 }
 
+function queryProjectLinks(projectId: number) {
+  return getDatabase()
+    .prepare(
+      `SELECT kind, label, url
+       FROM project_links
+       WHERE project_id = ?
+       ORDER BY sort_order, id`,
+    )
+    .all(projectId) as ProjectLinkRow[];
+}
+
+function queryRelatedTech(projectId: number) {
+  return getDatabase()
+    .prepare(
+      `SELECT tech.slug, tech.category, tech.title, tech.summary, relation.context
+       FROM project_tech_links AS relation
+       JOIN posts AS tech ON tech.id = relation.tech_post_id
+       WHERE relation.project_id = ? AND tech.kind = 'tech'
+       ORDER BY relation.sort_order, tech.title`,
+    )
+    .all(projectId) as RelatedTechRow[];
+}
+
 function toPost(row: PostRow): Post {
   const shared = {
     slug: row.slug,
@@ -61,7 +92,12 @@ function toPost(row: PostRow): Post {
     } satisfies TechPost;
   }
 
-  return { ...shared, kind: "project" } satisfies ProjectPost;
+  return {
+    ...shared,
+    kind: "project",
+    links: queryProjectLinks(row.id),
+    relatedTech: queryRelatedTech(row.id),
+  } satisfies ProjectPost;
 }
 
 function queryPosts(where = "", parameters: string[] = []) {
