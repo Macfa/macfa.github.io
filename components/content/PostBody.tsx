@@ -1,27 +1,8 @@
 import { MDXRemote } from "next-mdx-remote/rsc";
-import { isValidElement, type ComponentPropsWithoutRef, type ReactNode } from "react";
+import type { ComponentPropsWithoutRef } from "react";
 import { mdxOptions } from "@/lib/mdx";
-import { MermaidDiagram } from "@/components/md/MermaidDiagram";
+import { MdxPre } from "@/components/md/MdxPre";
 import { Prose } from "@/components/md/Prose";
-
-type PrettyCodePreProps = ComponentPropsWithoutRef<"pre"> & {
-  "data-language"?: string;
-};
-
-function codeBlockText(node: ReactNode): string {
-  if (typeof node === "string" || typeof node === "number") {
-    return String(node);
-  }
-  if (Array.isArray(node)) {
-    return node.map(codeBlockText).join("");
-  }
-  if (!isValidElement<{ children?: ReactNode; "data-line"?: boolean }>(node)) {
-    return "";
-  }
-
-  const text = codeBlockText(node.props.children);
-  return node.props["data-line"] !== undefined ? `${text}\n` : text;
-}
 
 const mdxComponents = {
   a: ({ href, ...props }: ComponentPropsWithoutRef<"a">) => {
@@ -41,12 +22,7 @@ const mdxComponents = {
     // eslint-disable-next-line @next/next/no-img-element
     <img {...props} alt={alt} loading="lazy" decoding="async" />
   ),
-  pre: ({ children, ...props }: PrettyCodePreProps) => {
-    if (props["data-language"] === "mermaid") {
-      return <MermaidDiagram chart={codeBlockText(children).trim()} />;
-    }
-    return <pre {...props}>{children}</pre>;
-  },
+  pre: MdxPre,
 };
 
 export function PostBody({ source }: { source: string }) {

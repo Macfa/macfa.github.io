@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useId, useState } from "react";
+import styles from "./MermaidDiagram.module.css";
 
 export function MermaidDiagram({ chart }: { chart: string }) {
   const reactId = useId();
@@ -44,7 +45,7 @@ export function MermaidDiagram({ chart }: { chart: string }) {
 
   if (error) {
     return (
-      <div className="mermaid-diagram mermaid-diagram-error">
+      <div className={`${styles.diagram} ${styles.error}`}>
         <p>Mermaid 다이어그램 오류: {error}</p>
         <pre>{chart}</pre>
       </div>
@@ -53,7 +54,7 @@ export function MermaidDiagram({ chart }: { chart: string }) {
 
   return (
     <div
-      className="mermaid-diagram"
+      className={styles.diagram}
       role="img"
       aria-label="Mermaid 다이어그램"
       aria-busy={!svg}

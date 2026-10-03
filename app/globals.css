@@ -102,35 +102,6 @@ body {
   padding: 0;
 }
 
-.tech-prose .mermaid-diagram {
-  display: flex;
-  min-height: 8rem;
-  align-items: center;
-  justify-content: center;
-  overflow-x: auto;
-  border: 1px solid color-mix(in oklab, var(--foreground) 12%, transparent);
-  border-radius: 0.5rem;
-  background: color-mix(in oklab, var(--foreground) 3%, transparent);
-  padding: 1rem;
-  color: color-mix(in oklab, var(--foreground) 65%, transparent);
-  font-size: 0.875rem;
-}
-
-.tech-prose .mermaid-diagram svg {
-  display: block;
-  max-width: 100%;
-  height: auto;
-}
-
-.tech-prose .mermaid-diagram-error {
-  display: block;
-  color: #b91c1c;
-}
-
-.tech-prose .mermaid-diagram-error pre {
-  margin-top: 0.75rem;
-}
-
 .tech-prose img,
 .tech-prose video {
   display: block;
