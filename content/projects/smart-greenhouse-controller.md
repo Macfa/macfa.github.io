@@ -1,5 +1,7 @@
 ---
 title: 스마트 온실 환경 제어기
+aliases:
+  - 스마트 온실 프로젝트
 date: '2026-09-22'
 summary: 센서 데이터를 읽고 팬과 급수 장치를 제어하는 MCU 기반 환경 제어기 예시입니다.
 tags:
@@ -8,18 +10,16 @@ tags:
   - sensor
   - uart
 sample: true
-links: []
-relatedTech:
-  - ref: communication/uart-frame-and-baud-rate
-    context: 보드의 상태와 센서 값을 호스트로 전달하는 통신 기반
-  - ref: c/c-struct-layout
-    context: 센서 샘플과 제어 상태를 안전하게 표현하는 데이터 구조
+demo: ""
+repository: ""
+documentation: ""
+download: ""
 ---
 > 이 글은 블로그 구성을 보여 주기 위한 **샘플 프로젝트**입니다. 실제 수행 이력이 아닙니다.
 
 ## 프로젝트 개요
 
-온도와 토양 수분을 주기적으로 측정하고, 설정한 임계값에 따라 환기 팬과 급수 펌프를 제어하는 장치를 가정했습니다. 제어 상태와 센서 값은 [[tech:communication/uart-frame-and-baud-rate|UART]]를 통해 호스트로 전달합니다.
+온도와 토양 수분을 주기적으로 측정하고, 설정한 임계값에 따라 환기 팬과 급수 펌프를 제어하는 장치를 가정했습니다. 제어 상태와 센서 값은 [[tech/communication/uart-frame-and-baud-rate|UART]]를 통해 호스트로 전달합니다.
 
 ## 맡은 역할
 
@@ -38,4 +38,4 @@ relatedTech:
 
 ## 기대 결과
 
-센서 수집, 판단, 출력 제어를 서로 분리하여 이후 센서나 통신 방식을 바꾸더라도 핵심 제어 로직을 재사용할 수 있습니다. 센서 데이터 묶음의 메모리 배치는 [[tech:c/c-struct-layout|C 구조체와 메모리 배치]]에서 더 자세히 다룹니다.
+센서 수집, 판단, 출력 제어를 서로 분리하여 이후 센서나 통신 방식을 바꾸더라도 핵심 제어 로직을 재사용할 수 있습니다. 센서 데이터 묶음의 메모리 배치는 [[C 구조체|C 구조체와 메모리 배치]]에서 더 자세히 다룹니다.

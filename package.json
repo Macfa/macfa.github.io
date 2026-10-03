@@ -8,7 +8,6 @@
     "content:sync": "node scripts/sync-content.mjs",
     "content:check": "node scripts/sync-content.mjs",
     "db:seed": "npm run content:sync",
-    "editor": "node writer/server.mjs",
     "start": "next start",
     "lint": "eslint"
   },

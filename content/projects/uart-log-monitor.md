@@ -1,5 +1,7 @@
 ---
 title: UART 로그 모니터
+aliases:
+  - 시리얼 로그 모니터
 date: "2026-09-12"
 summary: 보드의 시리얼 로그를 수집하고 장애 시점의 메시지를 빠르게 찾는 도구 예시입니다.
 tags:
@@ -8,17 +10,17 @@ tags:
   - linux
   - debugging
 sample: true
-links: []
-relatedTech:
-  - ref: communication/uart-frame-and-baud-rate
-    context: 로그가 깨질 때 프레임과 보레이트를 점검하기 위한 배경 지식
+demo: ""
+repository: ""
+documentation: ""
+download: ""
 ---
 
 > 이 글은 블로그 구성을 보여 주기 위한 **샘플 프로젝트**입니다. 실제 수행 이력이 아닙니다.
 
 ## 프로젝트 개요
 
-개발 보드가 출력하는 UART 메시지를 호스트에서 읽어 날짜별 파일로 저장하고, 오류 수준의 로그를 별도로 표시하는 작은 진단 도구를 가정했습니다. 통신 설정은 [[tech:communication/uart-frame-and-baud-rate|UART 프레임과 보레이트]] 글과 연결됩니다.
+개발 보드가 출력하는 UART 메시지를 호스트에서 읽어 날짜별 파일로 저장하고, 오류 수준의 로그를 별도로 표시하는 작은 진단 도구를 가정했습니다. 통신 설정은 [[UART 프레임|UART 프레임과 보레이트]] 글과 연결됩니다.
 
 ## 핵심 기능
 

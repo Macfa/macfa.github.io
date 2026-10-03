@@ -1,4 +1,4 @@
-import { existsSync, mkdirSync, readFileSync, readdirSync, renameSync, rmSync, statSync } from "node:fs";
+import { copyFileSync, existsSync, mkdirSync, readFileSync, readdirSync, renameSync, rmSync, statSync } from "node:fs";
 import { basename, dirname, extname, join, relative, sep } from "node:path";
 import { fileURLToPath } from "node:url";
 import { DatabaseSync } from "node:sqlite";
@@ -6,16 +6,19 @@ import matter from "gray-matter";
 
 const root = join(dirname(fileURLToPath(import.meta.url)), "..");
 const contentRoot = join(root, "content");
+const attachmentsRoot = join(contentRoot, "attachments");
 const publicRoot = join(root, "public");
+const publicAttachmentsRoot = join(publicRoot, "media", "attachments");
 const databasePath = join(root, "data", "blog.db");
 const temporaryDatabasePath = join(root, "data", "blog.next.db");
 const schemaPath = join(root, "data", "schema.sql");
-const allowedLinkKinds = new Set([
-  "demo",
-  "repository",
-  "documentation",
-  "download",
-]);
+const projectLinkKinds = ["demo", "repository", "documentation", "download"];
+const projectLinkLabels = {
+  demo: "Live demo",
+  repository: "Repository",
+  documentation: "Documentation",
+  download: "Download",
+};
 const allowedMediaExtensions = new Map([
   [".avif", "image"],
   [".gif", "gif"],
@@ -31,67 +34,66 @@ function fail(filePath, message) {
   throw new Error(`${relative(root, filePath)}: ${message}`);
 }
 
-function listMarkdownFiles(directory) {
+function listFiles(directory, predicate) {
   if (!existsSync(directory)) return [];
   return readdirSync(directory, { withFileTypes: true }).flatMap((entry) => {
     const target = join(directory, entry.name);
-    if (entry.isDirectory()) return listMarkdownFiles(target);
-    return entry.isFile() && /\.mdx?$/.test(entry.name) ? [target] : [];
+    if (entry.isDirectory()) return listFiles(target, predicate);
+    return entry.isFile() && predicate(entry.name) ? [target] : [];
   });
 }
 
+function listMarkdownFiles(directory) {
+  return listFiles(directory, (name) => /\.mdx?$/.test(name));
+}
+
 function stringValue(value, filePath, field, required = true) {
+  if (value instanceof Date && !Number.isNaN(value.valueOf())) {
+    return value.toISOString().slice(0, 10);
+  }
   if (typeof value !== "string" || (required && !value.trim())) {
     fail(filePath, `${field} must be a${required ? " non-empty" : ""} string`);
   }
   return value.trim();
 }
 
-function parseTags(value, filePath) {
-  if (!Array.isArray(value)) fail(filePath, "tags must be an array");
-  return [...new Set(value.map((tag) => stringValue(tag, filePath, "tag").toLowerCase()))];
+function parseStringList(value, filePath, field) {
+  if (value === undefined) return [];
+  const values = Array.isArray(value) ? value : [value];
+  return [...new Set(values.map((item) => stringValue(item, filePath, field)))];
 }
 
-function parseLinks(value, filePath, sample) {
-  if (value === undefined) return [];
-  if (!Array.isArray(value)) fail(filePath, "links must be an array");
-  const links = value.map((link, index) => {
-    if (!link || typeof link !== "object") fail(filePath, `links[${index}] must be an object`);
-    const kind = stringValue(link.kind, filePath, `links[${index}].kind`);
-    if (!allowedLinkKinds.has(kind)) fail(filePath, `unsupported link kind: ${kind}`);
-    const url = stringValue(link.url, filePath, `links[${index}].url`);
-    if (!/^https?:\/\//.test(url) && !url.startsWith("/")) {
-      fail(filePath, `links[${index}].url must be http(s) or an absolute site path`);
-    }
-    return {
-      kind,
-      label: typeof link.label === "string" && link.label.trim() ? link.label.trim() : kind,
-      url,
-    };
+function parseTags(value, filePath) {
+  return parseStringList(value, filePath, "tag").map((tag) =>
+    tag.replace(/^#+/, "").trim().toLowerCase(),
+  );
+}
+
+function validatePublicUrl(url, filePath, field) {
+  if (!/^https?:\/\//.test(url) && !url.startsWith("/")) {
+    fail(filePath, `${field} must be http(s) or an absolute site path`);
+  }
+}
+
+function parseProjectLinks(data, filePath, sample) {
+  const links = projectLinkKinds.flatMap((kind) => {
+    const value = data[kind];
+    if (value === undefined || value === null || value === "") return [];
+    const url = stringValue(value, filePath, kind);
+    validatePublicUrl(url, filePath, kind);
+    return [{ kind, label: projectLinkLabels[kind], url }];
   });
   if (!sample && links.length === 0) {
-    fail(filePath, "a published project requires at least one public link");
+    fail(filePath, "a published project requires demo, repository, documentation, or download");
   }
   return links;
 }
 
-function parseRelatedTech(value, filePath) {
-  if (value === undefined) return [];
-  if (!Array.isArray(value)) fail(filePath, "relatedTech must be an array");
-  return value.map((relation, index) => {
-    if (!relation || typeof relation !== "object") {
-      fail(filePath, `relatedTech[${index}] must be an object`);
-    }
-    return {
-      ref: stringValue(relation.ref, filePath, `relatedTech[${index}].ref`),
-      context:
-        typeof relation.context === "string" ? relation.context.trim() : "",
-    };
-  });
-}
-
 function readPosts() {
-  const files = listMarkdownFiles(contentRoot);
+  const files = [
+    ...listMarkdownFiles(join(contentRoot, "projects")),
+    ...listMarkdownFiles(join(contentRoot, "tech")),
+  ];
   const posts = files.map((filePath) => {
     const pathParts = relative(contentRoot, filePath).split(sep);
     const topLevel = pathParts[0];
@@ -115,18 +117,17 @@ function readPosts() {
     const sample = parsed.data.sample === true;
     return {
       filePath,
+      vaultPath: relative(contentRoot, filePath).replace(/\.mdx?$/, "").split(sep).join("/"),
       kind,
       slug,
       category,
       title: stringValue(parsed.data.title, filePath, "title"),
+      aliases: parseStringList(parsed.data.aliases, filePath, "alias"),
       date: stringValue(parsed.data.date, filePath, "date"),
-      summary:
-        typeof parsed.data.summary === "string" ? parsed.data.summary.trim() : "",
+      summary: typeof parsed.data.summary === "string" ? parsed.data.summary.trim() : "",
       tags: parseTags(parsed.data.tags ?? [], filePath),
       sample,
-      links: kind === "project" ? parseLinks(parsed.data.links, filePath, sample) : [],
-      relatedTech:
-        kind === "project" ? parseRelatedTech(parsed.data.relatedTech, filePath) : [],
+      links: kind === "project" ? parseProjectLinks(parsed.data, filePath, sample) : [],
       rawBody: parsed.content.trim(),
     };
   });
@@ -140,22 +141,132 @@ function readPosts() {
   return posts;
 }
 
-function resolveReferences(post, techByRef) {
-  const references = [];
-  const body = post.rawBody.replace(
-    /\[\[tech:([a-z0-9-]+\/[a-z0-9-]+)\|([^\]\n]+)\]\]/g,
-    (_, ref, label) => {
-      const target = techByRef.get(ref);
-      if (!target) fail(post.filePath, `unknown Tech reference: ${ref}`);
-      references.push(ref);
-      return `[${label}](/tech/${ref})`;
-    },
-  );
-  if (body.includes("[[tech:")) fail(post.filePath, "invalid Tech reference syntax");
-  return { body, references };
+function normalizeLookupKey(value) {
+  return value.normalize("NFKC").replace(/\\/g, "/").replace(/^\.\//, "").replace(/\.mdx?$/i, "").trim().toLowerCase();
 }
 
-function discoverMedia(body, filePath) {
+function addLookup(index, key, value) {
+  const normalized = normalizeLookupKey(key);
+  if (!normalized) return;
+  const matches = index.get(normalized) ?? [];
+  if (!matches.includes(value)) matches.push(value);
+  index.set(normalized, matches);
+}
+
+function buildPostIndex(posts) {
+  const index = new Map();
+  for (const post of posts) {
+    addLookup(index, post.vaultPath, post);
+    addLookup(index, post.slug, post);
+    addLookup(index, post.title, post);
+    for (const alias of post.aliases) addLookup(index, alias, post);
+  }
+  return index;
+}
+
+function findPost(target, sourcePost, postIndex) {
+  if (target.includes("#") || target.includes("^")) {
+    fail(sourcePost.filePath, `heading and block links are not supported yet: ${target}`);
+  }
+  const matches = postIndex.get(normalizeLookupKey(target)) ?? [];
+  if (matches.length === 0) fail(sourcePost.filePath, `unknown Obsidian link: [[${target}]]`);
+  if (matches.length > 1) {
+    fail(sourcePost.filePath, `ambiguous Obsidian link; use its vault path: [[${target}]]`);
+  }
+  return matches[0];
+}
+
+function postUrl(post) {
+  return post.kind === "tech"
+    ? `/tech/${post.category}/${post.slug}`
+    : `/projects/${post.slug}`;
+}
+
+function resolvePostLinks(post, postIndex) {
+  const techReferences = [];
+  const rememberTech = (target) => {
+    if (post.kind === "project" && target.kind === "tech") {
+      const ref = `${target.category}/${target.slug}`;
+      if (!techReferences.includes(ref)) techReferences.push(ref);
+    }
+  };
+
+  let body = post.rawBody.replace(
+    /\[\[tech:([a-z0-9-]+\/[a-z0-9-]+)\|([^\]\n]+)\]\]/g,
+    (_, ref, label) => {
+      const target = findPost(`tech/${ref}`, post, postIndex);
+      if (target.kind !== "tech") fail(post.filePath, `not a Tech post: ${ref}`);
+      rememberTech(target);
+      return `[${label}](${postUrl(target)})`;
+    },
+  );
+
+  body = body.replace(/(?<!!)\[\[([^\]\n]+)\]\]/g, (_, value) => {
+    const separator = value.indexOf("|");
+    const targetText = separator === -1 ? value : value.slice(0, separator);
+    const label = separator === -1 ? "" : value.slice(separator + 1).trim();
+    const target = findPost(targetText.trim(), post, postIndex);
+    rememberTech(target);
+    return `[${label || target.title}](${postUrl(target)})`;
+  });
+
+  if (body.includes("[[")) fail(post.filePath, "invalid or unsupported Obsidian link syntax");
+  return { body, techReferences };
+}
+
+function buildAttachmentIndex() {
+  const index = new Map();
+  for (const filePath of listFiles(attachmentsRoot, (name) => allowedMediaExtensions.has(extname(name).toLowerCase()))) {
+    const attachment = {
+      filePath,
+      relativePath: relative(attachmentsRoot, filePath).split(sep).join("/"),
+    };
+    addLookup(index, attachment.relativePath, attachment);
+    addLookup(index, basename(filePath), attachment);
+  }
+  return index;
+}
+
+function findAttachment(target, post, attachmentIndex) {
+  const matches = attachmentIndex.get(normalizeLookupKey(target)) ?? [];
+  if (matches.length === 0) fail(post.filePath, `attachment not found: ![[${target}]]`);
+  if (matches.length > 1) fail(post.filePath, `ambiguous attachment; include its folder: ![[${target}]]`);
+  return matches[0];
+}
+
+function publicAttachmentUrl(relativePath) {
+  return `/media/attachments/${relativePath.split("/").map(encodeURIComponent).join("/")}`;
+}
+
+function resolveObsidianEmbeds(post, attachmentIndex) {
+  const assets = [];
+  const body = post.rawBody.replace(/!\[\[([^\]\n]+)\]\]/g, (_, value) => {
+    const separator = value.indexOf("|");
+    const targetText = (separator === -1 ? value : value.slice(0, separator)).trim();
+    const attachment = findAttachment(targetText, post, attachmentIndex);
+    const extension = extname(attachment.relativePath).toLowerCase();
+    const kind = allowedMediaExtensions.get(extension);
+    const altText = (separator === -1 ? basename(targetText, extension) : value.slice(separator + 1)).trim();
+    const outputPath = join(publicAttachmentsRoot, ...attachment.relativePath.split("/"));
+    mkdirSync(dirname(outputPath), { recursive: true });
+    copyFileSync(attachment.filePath, outputPath);
+    const publicUrl = publicAttachmentUrl(attachment.relativePath);
+    assets.push({
+      storageKey: `media/attachments/${attachment.relativePath}`,
+      kind,
+      publicUrl,
+      altText,
+      caption: "",
+      byteSize: statSync(attachment.filePath).size,
+    });
+    return kind === "video"
+      ? `<video controls src="${publicUrl}"></video>`
+      : `![${altText.replace(/\]/g, "")}](${publicUrl})`;
+  });
+  return { body, assets };
+}
+
+function discoverMarkdownMedia(body, filePath) {
   const assets = [];
   const pattern = /!\[([^\]]*)\]\(([^)\s]+)(?:\s+"([^"]*)")?\)/g;
   for (const match of body.matchAll(pattern)) {
@@ -167,7 +278,7 @@ function discoverMedia(body, filePath) {
     let byteSize = null;
     let storageKey = `remote:${publicUrl}`;
     if (publicUrl.startsWith("/")) {
-      const localPath = join(publicRoot, publicUrl.replace(/^\/+/, ""));
+      const localPath = join(publicRoot, decodeURIComponent(publicUrl.replace(/^\/+/, "")));
       if (!existsSync(localPath)) fail(filePath, `media file not found: ${publicUrl}`);
       byteSize = statSync(localPath).size;
       storageKey = relative(publicRoot, localPath).split(sep).join("/");
@@ -178,21 +289,20 @@ function discoverMedia(body, filePath) {
 }
 
 const posts = readPosts();
+const postIndex = buildPostIndex(posts);
+const attachmentIndex = buildAttachmentIndex();
 const techByRef = new Map(
-  posts
-    .filter((post) => post.kind === "tech")
-    .map((post) => [`${post.category}/${post.slug}`, post]),
+  posts.filter((post) => post.kind === "tech").map((post) => [`${post.category}/${post.slug}`, post]),
 );
 for (const post of posts) {
-  const resolved = resolveReferences(post, techByRef);
+  const embedded = resolveObsidianEmbeds(post, attachmentIndex);
+  post.rawBody = embedded.body;
+  const resolved = resolvePostLinks(post, postIndex);
   post.body = resolved.body;
-  post.inlineTechReferences = resolved.references;
-  post.media = discoverMedia(post.body, post.filePath);
-  for (const relation of post.relatedTech) {
-    if (!techByRef.has(relation.ref)) {
-      fail(post.filePath, `unknown relatedTech reference: ${relation.ref}`);
-    }
-  }
+  post.inlineTechReferences = resolved.techReferences;
+  post.media = [...new Map(
+    [...embedded.assets, ...discoverMarkdownMedia(post.body, post.filePath)].map((asset) => [asset.storageKey, asset]),
+  ).values()];
 }
 
 mkdirSync(dirname(databasePath), { recursive: true });
@@ -230,7 +340,7 @@ const insertPostMedia = db.prepare(`
 const postIds = new Map();
 db.exec("BEGIN");
 try {
-  for (const [postIndex, post] of posts.entries()) {
+  for (const [postIndexValue, post] of posts.entries()) {
     const result = insertPost.run(
       post.kind,
       post.slug,
@@ -240,7 +350,7 @@ try {
       post.body,
       post.date,
       post.sample ? 1 : 0,
-      posts.length - postIndex,
+      posts.length - postIndexValue,
     );
     const postId = result.lastInsertRowid;
     postIds.set(`${post.kind}:${post.category ?? ""}:${post.slug}`, postId);
@@ -253,24 +363,17 @@ try {
       insertProjectLink.run(postId, link.kind, link.label, link.url, index);
     }
     for (const [index, media] of post.media.entries()) {
-      insertMedia.run(
-        media.storageKey,
-        media.kind,
-        media.publicUrl,
-        media.altText,
-        media.caption,
-        media.byteSize,
-      );
+      insertMedia.run(media.storageKey, media.kind, media.publicUrl, media.altText, media.caption, media.byteSize);
       insertPostMedia.run(postId, findMediaRow.get(media.storageKey).id, index);
     }
   }
 
   for (const post of posts.filter((item) => item.kind === "project")) {
     const projectId = postIds.get(`project::${post.slug}`);
-    for (const [index, relation] of post.relatedTech.entries()) {
-      const target = techByRef.get(relation.ref);
+    for (const [index, ref] of post.inlineTechReferences.entries()) {
+      const target = techByRef.get(ref);
       const techId = postIds.get(`tech:${target.category}:${target.slug}`);
-      insertProjectTech.run(projectId, techId, relation.context, index);
+      insertProjectTech.run(projectId, techId, target.summary, index);
     }
   }
   db.exec("COMMIT");
@@ -285,5 +388,5 @@ rmSync(databasePath, { force: true });
 renameSync(temporaryDatabasePath, databasePath);
 
 console.log(
-  `Synced ${posts.length} Markdown posts (${posts.filter((post) => post.kind === "project").length} projects, ${techByRef.size} Tech) into ${relative(root, databasePath)}`,
+  `Synced ${posts.length} Obsidian Markdown posts (${posts.filter((post) => post.kind === "project").length} projects, ${techByRef.size} Tech) into ${relative(root, databasePath)}`,
 );

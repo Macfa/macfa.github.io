@@ -1,5 +1,8 @@
 ---
 title: UART 프레임과 보레이트 이해하기
+aliases:
+  - UART 프레임
+  - UART 보레이트
 date: "2026-09-18"
 summary: UART 통신의 프레임 구조와 보레이트 불일치가 만드는 증상을 정리한 샘플 글입니다.
 tags:

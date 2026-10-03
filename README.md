@@ -2,132 +2,126 @@
 
 임베디드와 시스템 프로그래밍 프로젝트 및 기술 기록을 위한 Next.js 블로그입니다.
 
-Markdown 파일이 콘텐츠의 원본이며, 개발·빌드할 때 SQLite 데이터베이스를 자동으로
-생성합니다. 같은 글을 Markdown과 DB에 각각 수정할 필요가 없습니다.
+`content/`는 Obsidian Vault이자 콘텐츠 원본입니다. Obsidian에서 작성한 Markdown을
+빌드할 때 검사하고 SQLite 데이터베이스와 정적 페이지를 자동 생성합니다.
 
-## 실행
+## 준비
+
+1. [Obsidian](https://obsidian.md)을 설치합니다.
+2. `Open folder as vault`를 선택합니다.
+3. 이 저장소의 `content` 폴더를 엽니다.
+
+Vault 설정은 `content/.obsidian/app.json`에 포함되어 있습니다. 내부 링크 변경을
+추적하고, 드래그한 첨부파일은 `content/attachments`에 저장하도록 설정했습니다.
+
+## 글 작성
+
+글은 아래 위치에 만듭니다. 파일 이름은 영문 소문자, 숫자, 하이픈을 사용합니다.
+
+```text
+content/
+├── projects/<slug>.md
+├── tech/<category>/<slug>.md
+└── attachments/
+```
+
+Tech 글의 Properties 예시는 다음과 같습니다.
+
+```yaml
+---
+title: C 구조체와 메모리 배치
+aliases:
+  - C 구조체
+  - 구조체 메모리 배치
+date: "2026-10-03"
+summary: 구조체의 정렬과 패딩을 설명합니다.
+tags:
+  - c
+  - memory
+sample: false
+---
+```
+
+Properties는 Obsidian 상단 입력 영역에서 수정할 수 있습니다. `aliases`를 등록하면
+파일 이름이 영문 Slug여도 한글 제목으로 내부 글을 검색할 수 있습니다.
+
+### 프로젝트 공개 링크
+
+프로젝트는 다음 Properties에 공개 주소를 입력합니다.
+
+```yaml
+demo: https://example.com
+repository: https://github.com/example/project
+documentation: ""
+download: ""
+```
+
+실제 프로젝트(`sample: false`)는 네 항목 중 하나 이상이 필요합니다. 샘플 글은
+주소가 없어도 됩니다.
+
+## Tech 글 연결
+
+Project 글을 작성하다 `[[`를 입력하면 같은 Vault의 Project와 Tech 글을 검색할 수
+있습니다. Tech 폴더로 좁히려면 `[[tech/`를 입력합니다.
+
+```md
+센서 상태는 [[tech/c/c-struct-layout|C 구조체]]로 표현했습니다.
+```
+
+URL을 직접 입력할 필요가 없습니다. 빌드 과정이 대상 Markdown의 실제 종류와
+경로를 확인하여 다음 공개 링크로 변환합니다.
+
+```text
+/tech/c/c-struct-layout/
+```
+
+Project 본문에서 연결한 Tech 글은 Project 상세 하단의 관련 Tech 카드에도 자동으로
+추가됩니다. 존재하지 않거나 여러 글과 모호하게 일치하는 링크는 빌드를 중단시킵니다.
+
+## 태그
+
+태그는 정적 사이트에서도 사용할 수 있습니다. 빌드 시 등록된 모든 태그에 대해
+`/tech/tags/<tag>/` 정적 페이지를 미리 생성합니다.
+
+- Project와 Tech 상세의 태그를 누르면 해당 태그 페이지로 이동
+- 태그 페이지에는 같은 태그를 가진 Tech 글을 표시
+- 서버나 실시간 데이터베이스 없이 GitHub Pages에서 동작
+- 새 태그를 추가하고 push하면 다음 배포에서 태그 페이지 자동 생성
+
+## 이미지와 짧은 영상
+
+Obsidian에 이미지, GIF, WebM, MP4 파일을 드래그하면 `content/attachments`에
+저장되고 아래 형식으로 삽입됩니다.
+
+```md
+![[uart-waveform.gif]]
+```
+
+빌드 과정은 사용된 첨부파일을 `public/media/attachments`로 복사하고 공개 URL로
+변환합니다. 같은 이름의 첨부파일이 여러 폴더에 있으면 Vault 기준 경로를 적어야
+합니다.
+
+## 로컬 검사와 실행
 
 Node.js 22.13 이상이 필요합니다.
 
 ```bash
 npm install
+npm run content:sync
 npm run dev
 ```
 
-`npm run dev`와 `npm run build`는 먼저 콘텐츠를 검사하고 `data/blog.db`를
-최신 Markdown 내용으로 다시 만듭니다.
+`npm run dev`와 `npm run build`는 실행 전에 자동으로 콘텐츠를 검사하고
+`data/blog.db`를 다시 생성합니다. Markdown과 데이터베이스를 따로 수정하지
+않습니다.
 
-## 글 작성
+## 배포
 
-### 로컬 작성 화면
+작성한 파일을 GitHub의 `main` 브랜치에 push하면 GitHub Actions가 자동으로:
 
-```bash
-npm run editor
-```
+1. Obsidian Markdown과 내부 링크를 검사합니다.
+2. SQLite 데이터베이스를 생성합니다.
+3. 태그 페이지를 포함한 Next.js 정적 사이트를 빌드합니다.
+4. [macfa.github.io](https://macfa.github.io)에 배포합니다.
 
-브라우저에서 `http://127.0.0.1:4310`을 열면 별도의 작성 화면을 사용할 수
-있습니다. 이 화면은 로컬 컴퓨터에서만 열리며 공개 사이트에는 배포되지 않습니다.
-
-- Tech 또는 Project 글 생성 및 기존 글 수정
-- 기존 태그 검색과 선택
-- Markdown 미리보기
-- 이미지, GIF, WebM, MP4 업로드
-- 프로젝트의 데모, 저장소, 문서, 다운로드 링크 등록
-- 저장 시 Markdown 파일 작성과 SQLite 동기화
-
-본문에서 Tech 개념을 연결하는 순서는 다음과 같습니다.
-
-1. `#` 뒤에 태그 이름의 일부를 입력합니다. 최대 5개의 기존 태그가 표시됩니다.
-2. 원하는 태그에서 `Tab` 또는 `Enter`를 누릅니다.
-3. 해당 태그를 가진 Tech 글 제목을 검색합니다.
-4. 원하는 글에서 다시 `Tab` 또는 `Enter`를 누르면 내부 링크가 삽입됩니다.
-
-예를 들어 `#c` → `Tab` → `구조체` → `Tab` 순서로 입력하면 아래 참조가
-본문에 들어갑니다.
-
-```md
-[[tech:c/c-struct-layout|C 구조체와 메모리 배치]]
-```
-
-빌드 과정에서 이 참조를 실제 사이트 경로로 변환하고, 대상 글이 없으면 오류를
-발생시킵니다. URL을 직접 기억하거나 붙여 넣을 필요가 없습니다.
-
-### Markdown 파일 직접 작성
-
-작성 화면을 사용하지 않고 Markdown 파일을 직접 추가해도 됩니다.
-
-```text
-content/
-├── projects/<slug>.md
-└── tech/<category>/<slug>.md
-```
-
-프로젝트 글의 예시는 다음과 같습니다.
-
-```md
----
-title: 프로젝트 제목
-date: "2026-10-03"
-summary: 목록에 표시할 설명
-tags:
-  - c
-  - uart
-sample: false
-links:
-  - kind: repository
-    label: GitHub
-    url: https://github.com/example/project
-relatedTech:
-  - ref: communication/uart-frame-and-baud-rate
-    context: 프로젝트에서 사용한 통신 개념
----
-
-## 개요
-
-[[tech:communication/uart-frame-and-baud-rate|UART 프레임]]을 사용했습니다.
-```
-
-실제 프로젝트(`sample: false`)는 접근 가능한 공개 링크를 하나 이상 등록해야
-합니다. `links.kind`는 `demo`, `repository`, `documentation`, `download`를
-지원합니다.
-
-직접 작성한 파일은 아래 명령으로 검사하고 DB에 반영할 수 있습니다.
-
-```bash
-npm run content:sync
-```
-
-## 이미지와 짧은 영상
-
-작성 화면에서 추가한 파일은 `public/media/<글-slug>/`에 저장되고 본문에는 경로가
-삽입됩니다. Markdown에서 직접 이미지를 참조할 수도 있습니다.
-
-```md
-![로직 애널라이저에서 확인한 UART 파형](/media/uart/frame.webp)
-```
-
-이미지와 GIF 바이너리는 SQLite에 넣지 않고 파일 정보와 공개 경로만 기록합니다.
-파일이 많아지면 `public/media`의 원본을 S3나 R2 같은 Object Storage와 CDN으로
-옮기고 URL만 교체할 수 있습니다. 큰 GIF는 재생 성능을 위해 WebM 또는 MP4로
-변환하는 것을 권장합니다. 작성 화면의 파일당 업로드 제한은 10MB입니다.
-
-## 데이터베이스
-
-- `data/schema.sql`: 테이블과 인덱스 정의
-- `data/blog.db`: 빌드가 읽는 생성 결과물
-- `scripts/sync-content.mjs`: Markdown 검사, 내부 참조 변환, DB 생성
-
-Next.js 서버 컴포넌트가 빌드 시 SQLite를 조회해 정적 페이지를 생성하므로 DB와
-쿼리 코드는 브라우저로 전달되지 않습니다. 태그는 넓은 주제 탐색에 사용하고,
-본문의 Tech 참조는 특정 개념 글로 바로 연결합니다. 프로젝트의 `relatedTech`는
-상세 페이지 하단의 관련 Tech 카드로 표시됩니다.
-
-## 빌드와 배포
-
-```bash
-npm run build
-```
-
-빌드 결과는 `out/`에 생성됩니다. `main` 브랜치에 push하면 GitHub Actions의
-`.github/workflows/deploy-pages.yml`이 `npm run build`를 실행하고
-`https://macfa.github.io`에 자동 배포합니다.
+빌드 결과는 로컬에서는 `out/`에 생성됩니다.

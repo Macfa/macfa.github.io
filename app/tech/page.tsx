@@ -2,7 +2,8 @@ import type { Metadata } from "next";
 import { Container } from "@/components/layout/Container";
 import { CategoryNav } from "@/components/content/CategoryNav";
 import { PostList } from "@/components/content/PostList";
-import { getTechCategories, getTechPosts } from "@/lib/content";
+import { TagList } from "@/components/content/TagList";
+import { getAllTags, getTechCategories, getTechPosts } from "@/lib/content";
 
 export const metadata: Metadata = {
   title: "Tech",
@@ -11,6 +12,7 @@ export const metadata: Metadata = {
 export default function TechPage() {
   const categories = getTechCategories();
   const posts = getTechPosts();
+  const tags = getAllTags();
 
   return (
     <Container>
@@ -23,6 +25,12 @@ export default function TechPage() {
       <div className="mt-6">
         <CategoryNav categories={categories} />
       </div>
+      <section className="mt-8 border-t border-neutral-200 pt-6 dark:border-neutral-800">
+        <h2 className="font-mono text-xs text-neutral-500">Tags</h2>
+        <div className="mt-3">
+          <TagList tags={tags} />
+        </div>
+      </section>
       <PostList posts={posts} empty="아직 기술 글이 없습니다." />
     </Container>
   );
