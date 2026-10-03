@@ -23,6 +23,11 @@
 # misc
 .DS_Store
 *.pem
+*.key
+*.p12
+*.pfx
+*.mobileprovision
+credentials*.json
 
 # debug
 npm-debug.log*
@@ -40,6 +45,10 @@ yarn-error.log*
 *.tsbuildinfo
 next-env.d.ts
 
-# Obsidian local UI state
-/content/.obsidian/workspace.json
-/content/.obsidian/workspace-mobile.json
+# Generated content database
+/data/blog.db
+/data/blog.next.db
+
+# Obsidian local configuration (only shared vault settings are tracked)
+/content/.obsidian/*
+!/content/.obsidian/app.json
