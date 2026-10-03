@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useId, useState } from "react";
+import { DiagramViewport } from "./DiagramViewport";
 import styles from "./MermaidDiagram.module.css";
 
 export function MermaidDiagram({ chart }: { chart: string }) {
@@ -53,14 +54,12 @@ export function MermaidDiagram({ chart }: { chart: string }) {
   }
 
   return (
-    <div
-      className={styles.diagram}
-      role="img"
-      aria-label="Mermaid 다이어그램"
-      aria-busy={!svg}
-      dangerouslySetInnerHTML={svg ? { __html: svg } : undefined}
-    >
-      {svg ? null : "다이어그램을 불러오는 중…"}
-    </div>
+    <DiagramViewport label="Mermaid 다이어그램" loading={!svg}>
+      {svg ? (
+        <div className={styles.diagram} dangerouslySetInnerHTML={{ __html: svg }} />
+      ) : (
+        <p className={styles.loading}>다이어그램을 불러오는 중…</p>
+      )}
+    </DiagramViewport>
   );
 }
