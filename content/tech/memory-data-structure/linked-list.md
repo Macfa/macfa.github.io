@@ -23,15 +23,19 @@ sample: false
 
 ## TL;DR
 
-연결 리스트는 포인터를 이용해 떨어진 메모리의 노드를 하나의 순서로 연결한다  
-반복시간은 요소에 비례한다 ( O(n) )  
-수정/삭제 가 편하지만, 시간 소요 증가 및  메모리 관리가 더 필요
+연결 리스트는 포인터를 이용해 떨어진 메모리의 노드를 하나의 순서로 연결한다.
+
+탐색 시간은 요소에 비례한다 (`O(n)`).
+
+위치를 알면 수정·삭제가 빠르다.
+
+대신 추가 포인터와 메모리 관리가 필요하다.
 
 
 ## 개요
 
 연결 리스트는 각각의 노드가 다음 노드의 주소를 저장하여 연결되는 자료구조다.
-이 문서에서는 이해한 범위 내 연결 리스트 설명한다
+이 문서에서는 이해한 범위 내에서 연결 리스트를 설명한다.
 
 
 ## 구조와 동작 원리
@@ -44,26 +48,28 @@ typedef struct NODE {
 } Node;
 ```
 
-각 노드는 데이터와 다음 노드를 가리키는 `next` 포인터를 가지고
-필요하다면, 식별번호를 둘 수 있다
-`head`부터 `next`를 따라 순회하며, 마지막 노드의 `next` ( `tail` )는 `NULL`이다.
+각 노드는 데이터와 다음 노드를 가리키는 `next` 포인터를 가진다.
+필요하다면 식별번호를 둘 수 있다.
+`head`부터 `next`를 따라 순회하며, 마지막 노드의 `next`는 `NULL`이다.
 
 ```mermaid
 flowchart LR
     HEAD((head)) --> N1["Node 1<br/>data = 11"]
     N1 -->|next| N2["Node 2<br/>data = 22"]
     N2 -->|next| N3["Node 3<br/>data = 33"]
-    N3 -->|next| END[tail]
+    N3 -->|next| END[NULL]
 ```
 
-## 주의사항 
+## 주의사항
 
-힙 메모리에 영역에 노드를 생성하는 것임으로, 연결 리스트의 사용이 다 다 되었을 경우 꼭 메모리 해제와 포인터 NULL 처리가 필요하다  
+힙 메모리 영역에 노드를 생성하는 것이므로, 연결 리스트의 사용이 끝났을 경우 꼭 메모리 해제와 포인터 `NULL` 처리가 필요하다.
 
-중간의 노드를 제거할 경우, 노드의 정보 갱신이 없다면, 삭제요소 이후의 노드는 쓰레기 상태가 된다
+중간 노드를 제거할 경우, 이전 노드의 `next`를 갱신하지 않으면 삭제 요소 이후의 노드에 접근할 수 없게 된다.
 
 ## 구현
 ```c
+#include <stdio.h>
+#include <stdlib.h>
 
 typedef struct NODE {
   int number;
@@ -92,7 +98,7 @@ void displayNode(Node* node) {
 Node* clearNode(Node* node) {
 
   // recursion end condition
-  if(node->next == NULL) {
+  if(node == NULL) {
     return NULL;
   }
 
@@ -112,37 +118,36 @@ Node* clearNode(Node* node) {
  * @return void
  * @note  테스트용도의 함수
  */
-void testLinkedList(void);
+void testLinkedList(void) {
+  Node* head_node = malloc(sizeof(Node));
+  if(head_node == NULL) {
+    return;
+  }
+  head_node->number = 1;
+  head_node->data = 11;
+  head_node->next = NULL;
 
-typedef struct NODE {
-  int number; // 선택사항
-  int data;
-  struct NODE* next;
-} Node;
+  head_node->next = malloc(sizeof(Node));
+  if(head_node->next == NULL) {
+    head_node = clearNode(head_node);
+    return;
+  }
+  head_node->next->number = 2;
+  head_node->next->data = 22;
+  head_node->next->next = NULL;
 
-int size;
+  head_node->next->next = malloc(sizeof(Node));
+  if(head_node->next->next == NULL) {
+    head_node = clearNode(head_node);
+    return;
+  }
+  head_node->next->next->number = 3;
+  head_node->next->next->data = 33;
+  head_node->next->next->next = NULL;
 
-Node head = {
-  .data = 64
-  .next = NULL
-};
-
-// malloc
-Node* first_node = malloc(sizeof(Node));
-
-first_node->next = NULL;
-head.next = first_node;
-
-
-Node* second_node = malloc(sizeof(Node));
-
-second_node->next = NULL;
-first_node.next = second_node;
-
-first_node = clearNode(first_node);
-first_node->next = NULL;
-head = clearNode(head); 
-head->next = NULL;
+  displayNode(head_node);
+  head_node = clearNode(head_node);
+}
 
 ```
 
